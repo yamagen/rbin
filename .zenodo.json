@@ -1,0 +1,15 @@
+{
+  "creators": [
+    {
+      "name": "Yamamoto, Hilofumi",
+      "orcid": "https://orcid.org/0000-0001-6876-139X"
+    }
+  ],
+  "title": "rbin: A small command-line utility for rank-based binning",
+  "version": "0.1.1",
+  "access_right": "open",
+  "keywords": ["histogram", "binning", "rank-based binning", "Sturges rule", "Scott rule", "Freedman-Diaconis rule", "cooccurrence weight", "digital humanities", "waka"],
+  "license": "mit",
+  "upload_type": "software",
+  "language": "eng"
+}
