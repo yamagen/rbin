@@ -1,0 +1,6 @@
+tmp/
+rbin
+*.o
+*~
+*.swp
+*.swo
