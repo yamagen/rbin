@@ -1,6 +1,6 @@
 # rbin
 
-Last change: 2026/07/07-08:26:07.
+Last change: 2026/07/07-08:28:49.
 
 Hilofumi Yamamoto, Ph.D.
 Institute of Science Tokyo
@@ -87,8 +87,10 @@ make PREFIX=$HOME/.local install
 make clean
 ```
 
+## Related tools
+
+`rbin` is part of a small family of command-line exploratory data filters, together with `cw`, SLP (stem leaf plotter), and KSF (kanji statistics filter).
+
 ## License
 
 This software is released under the MIT License. See `LICENSE.txt` for details.
-
-rbin is part of a small family of command-line exploratory data filters, together with SLP (stem leaf plotter) and KSF (kanji statistics filter).
