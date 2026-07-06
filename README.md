@@ -1,13 +1,13 @@
 # rbin
 
-Last change: 2026/07/06-20:32:00.
+Last change: 2026/07/07-08:26:07.
 
 Hilofumi Yamamoto, Ph.D.
 Institute of Science Tokyo
 
 ## Rank Bin: rank/bin-based frequency distribution
 
-[![DOI](https://zenodo.org/badge/1286672754.svg)](https://doi.org/10.5281/zenodo.21124284)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21229729.svg)](https://doi.org/10.5281/zenodo.21229729)
 
 `rbin` is a small command-line utility for making rank/bin-based frequency distributions from numeric input.
 
