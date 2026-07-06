@@ -1,6 +1,6 @@
 # rbin
 
-Last change: 2026/07/06-19:43:15.
+Last change: 2026/07/06-20:32:00.
 
 Hilofumi Yamamoto, Ph.D.
 Institute of Science Tokyo
@@ -90,3 +90,5 @@ make clean
 ## License
 
 This software is released under the MIT License. See `LICENSE.txt` for details.
+
+rbin is part of a small family of command-line exploratory data filters, together with SLP (stem leaf plotter) and KSF (kanji statistics filter).

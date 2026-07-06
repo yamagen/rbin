@@ -6,7 +6,7 @@
     }
   ],
   "title": "rbin: A small command-line utility for rank-based binning",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "access_right": "open",
   "keywords": ["histogram", "binning", "rank-based binning", "Sturges rule", "Scott rule", "Freedman-Diaconis rule", "cooccurrence weight", "digital humanities", "waka"],
   "license": "mit",
