@@ -1,10 +1,14 @@
 #include "config.h"
 #include "formula.h"
 #include "util.h"
+#include <ctype.h>
+#include <errno.h>
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h> /* EXIT_FAILURE,exit */
 #include <string.h>
 
+static int parse_number(const char *s, double *value);
 int count_freq(FILE *fp);
 int main(int argc, char **argv);
 
@@ -19,13 +23,35 @@ int int_f = 0;
 double prec_level = 1;
 int rank_type = 0; /* default is sturges. */
 
+
+static int parse_number(const char *s, double *value) {
+  char *end;
+
+  while (isspace((unsigned char)*s))
+    s++;
+
+  if (*s == '\0')
+    return 0;
+
+  errno = 0;
+  *value = strtod(s, &end);
+
+  if (s == end || errno == ERANGE || !isfinite(*value))
+    return 0;
+
+  while (isspace((unsigned char)*end))
+    end++;
+
+  return *end == '\0';
+}
+
 int count_freq(FILE *fp) {
 
   char buf[BUF];
-  char p[BUF];
   int n = 0;
   int i = 0, k = 0;
   int rank = 0;
+  long line_no = 0;
   int out_type = 0;
 
   double x = 0.0;
@@ -51,43 +77,61 @@ int count_freq(FILE *fp) {
 
   /* read from file */
   while (fgets(buf, BUF, fp) != NULL) {
-    if (buf[0] != '#' && (out_type = digitstr(buf))) {
-      out_format = MAX(out_format, out_type);
+    line_no++;
 
-      /* 測定精度 */
-      prec = check_precision(buf);
-      prec_level = MIN(prec_level, prec);
-      x = atof(buf);
+    if (!parse_number(buf, &x)) {
+      size_t len = strcspn(buf, "\r\n");
+      buf[len] = '\0';
 
-      if ((size_t)n >= data_cap) {
-        size_t new_cap = data_cap ? data_cap * 2 : 1024;
-        double *tmp = realloc(data, new_cap * sizeof(double));
-        if (tmp == NULL) {
-          free(data);
-          fclose(fs);
-          exit(EXIT_FAILURE);
-        }
-        data = tmp;
-        data_cap = new_cap;
-      }
+      if (err_f)
+        continue;
 
-      data[n] = x;
-
-      fprintf(fs, "%f\n", x);
-      if (n == 0)
-        min = max = x; /* init variable min and max */
-      max = MAX(max, x);
-      min = MIN(min, x);
-      n++;                       /* N */
-      x -= s1;                   /* gap with temp average */
-      s1 += x / n;               /* average */
-      s2 += (n - 1) * x * x / n; /* square  */
-    } else if (!err_f) {
-      for (i = 0; buf[i] != '\0' && buf[i] != '\n'; i++)
-        p[i] = buf[i];
-      k++;
-      fprintf(stderr, "%3d: error? %s in line %d\n", k, p, n);
+      fprintf(stderr, "%% %s: input format error at line %ld: %s\n",
+              PROG_NAME, line_no, buf);
+      free(data);
+      fclose(fs);
+      return EXIT_FAILURE;
     }
+
+    out_type = digitstr(buf);
+    if (out_type == 0)
+      out_type = 2; /* strtod() accepted a real number such as 1e-3 */
+    out_format = MAX(out_format, out_type);
+
+    /* 測定精度 */
+    prec = check_precision(buf);
+    prec_level = MIN(prec_level, prec);
+
+    if ((size_t)n >= data_cap) {
+      size_t new_cap = data_cap ? data_cap * 2 : 1024;
+      double *tmp = realloc(data, new_cap * sizeof(double));
+      if (tmp == NULL) {
+        free(data);
+        fclose(fs);
+        exit(EXIT_FAILURE);
+      }
+      data = tmp;
+      data_cap = new_cap;
+    }
+
+    data[n] = x;
+
+    fprintf(fs, "%.17g\n", x);
+    if (n == 0)
+      min = max = x; /* init variable min and max */
+    max = MAX(max, x);
+    min = MIN(min, x);
+    n++;                       /* N */
+    x -= s1;                   /* gap with temp average */
+    s1 += x / n;               /* average */
+    s2 += (n - 1) * x * x / n; /* square  */
+  }
+
+  if (n == 0) {
+    fprintf(stderr, "%% %s: no numeric input\n", PROG_NAME);
+    free(data);
+    fclose(fs);
+    return EXIT_FAILURE;
   }
 
   /* number of bins/ranks */
@@ -117,12 +161,21 @@ int count_freq(FILE *fp) {
     break;
   }
 
+  if (rank < 1)
+    rank = 1;
+
   /* calc rank width: delta */
-  if (int_f) {
+  if (max == min) {
+    rank = 1;
+    delta = 1.0;
+  } else if (int_f) {
     delta = (int)((max - min) / rank);
+    if (delta < 1.0)
+      delta = 1.0;
     rank = (int)((max - min) / delta) + 1;
-  } else
+  } else {
     delta = (max - min) / rank;
+  }
 
   rewind(fs);
 
@@ -144,9 +197,11 @@ int count_freq(FILE *fp) {
     x = atof(buf);
     s3 += (x - s1) * (x - s1) * (x - s1);            /* 歪度計算 */
     s4 += (x - s1) * (x - s1) * (x - s1) * (x - s1); /* 尖度計算 */
-    i = (int)((x - min) / delta);                    /* 階級へふりわけ */
-    if (i == rank) /* 指定階級数と一致した場合には,一段下の最大階級へ */
-      i--;
+    i = (int)((x - min) / delta); /* 階級へふりわけ */
+    if (i < 0)
+      i = 0;
+    else if (i >= rank)
+      i = rank - 1;
     r[i].cnt++;
     rmax = MAX(rmax, r[i].cnt);
   }
@@ -292,17 +347,20 @@ int main(int argc, char **argv) {
   }
 
   if (ai >= argc) {
-    count_freq(stdin);
-  } else {
-    for (; ai < argc; ai++) {
-      if ((fp = fopen(argv[ai], "r")) == NULL) {
-        fprintf(stderr, "can't open %s!\n", argv[ai]);
-        exit(1);
-      }
-      count_freq(fp);
-      fclose(fp);
-    }
+    return count_freq(stdin);
   }
 
-  return 0;
+  for (; ai < argc; ai++) {
+    if ((fp = fopen(argv[ai], "r")) == NULL) {
+      fprintf(stderr, "can't open %s!\n", argv[ai]);
+      return EXIT_FAILURE;
+    }
+    if (count_freq(fp) != 0) {
+      fclose(fp);
+      return EXIT_FAILURE;
+    }
+    fclose(fp);
+  }
+
+  return EXIT_SUCCESS;
 }
