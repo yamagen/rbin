@@ -1,0 +1,66 @@
+diff --git a/src/config.h b/src/config.h
+--- a/src/config.h
++++ b/src/config.h
+@@ -24,10 +24,11 @@
+ #define RANK_DEFAULT RANK_STURGES
+ 
+ #define USAGE                                                                  \
+-  "% " PROG_NAME " [-aschiertv] [-Tn] [-Wnum] file...\n"                       \
++  "% " PROG_NAME " [-aHschiertv] [-Tn] [-Wnum] file...\n"                      \
+   "  -a   append a return code (data for plot)\n"                              \
+   "  -c   show only range and frequency count\n"                               \
+   "  -e   print no error messages\n"                                           \
++  "  -H   hold previous frequency for empty bins\n"                             \
+   "  -h   print this help\n"                                                   \
+   "  -i   round delta to integer value\n"                                      \
+   "  -r   print rank\n"                                                        \
+diff --git a/src/main.c b/src/main.c
+--- a/src/main.c
++++ b/src/main.c
+@@ -18,6 +18,7 @@
+ int with_stat = 0;
+ int out_format = 0;
+ int print_rank = 0;
++int hold_empty = 0;
+ int err_f = 0;
+ int int_f = 0;
+ double prec_level = 1;
+@@ -221,8 +222,15 @@
+   }
+ 
+   /* output */
++  int previous_count = 0;
++
+   for (i = 0; i < rank; i++) {
++    int display_count = r[i].cnt;
++
++    if (hold_empty && display_count == 0 && i > 0)
++      display_count = previous_count;
++
+     if (print_rank)
+       printf("%3d ", i + 1);
+ 
+@@ -233,10 +241,12 @@
+ 
+     if (!only_num) {
+       printf("- :");
+-      for (k = 0; k < r[i].cnt / (rmax / screen_w); k++)
++      for (k = 0; k < display_count / (rmax / screen_w); k++)
+         putchar('*');
+     }
+-    printf(" %d\n", r[i].cnt);
++    printf(" %d\n", display_count);
++    previous_count = display_count;
+   }
+ 
+   if (append_return)
+@@ -263,6 +273,9 @@
+       case 'e':
+         err_f = 1;
+         break;
++      case 'H':
++        hold_empty = 1;
++        break;
+       case 'i':
+         int_f = 1;
+         break;

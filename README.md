@@ -1,6 +1,6 @@
 # rbin
 
-Last change: 2026/07/07-08:28:49.
+Last change: 2026/08/13.
 
 Hilofumi Yamamoto, Ph.D.
 Institute of Science Tokyo
@@ -20,6 +20,38 @@ It reads numeric values from standard input or files and prints a frequency dist
 - `-T2`: Freedman-Diaconis rule
 
 For Scott and Freedman-Diaconis, `rbin` first calculates a method-specific bin width and then converts it into the actual number of bins used for output.
+
+
+## Empty-bin hold
+
+With the `-H` option, an empty bin inherits the displayed frequency of the preceding bin instead of being shown as `0`.
+
+This changes only the displayed frequency distribution. The underlying bin counts and statistical calculations are not modified.
+
+For example:
+
+```sh
+printf "1\n1\n1\n5\n5\n" | ./rbin -c
+printf "1\n1\n1\n5\n5\n" | ./rbin -c -H
+```
+
+Without `-H`:
+
+```text
+    1.00  3
+    2.33  0
+    3.67  2
+```
+
+With `-H`:
+
+```text
+    1.00  3
+    2.33  3
+    3.67  2
+```
+
+This option is intended for exploratory plots in which an empty interval is displayed by carrying the preceding observed level forward.
 
 ## Statistical output
 

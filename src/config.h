@@ -1,5 +1,5 @@
 #define PROG_NAME "rbin"
-#define REVISION PROG_NAME " - Last change: 2026/07/02-08:21:15."
+#define REVISION PROG_NAME " - Last change: 2026/08/13-14:58:16."
 #define AUTHOR "H. Yamamoto, Ph.D. (Institute of Science Tokyo)"
 
 #define VERSION REVISION
@@ -21,18 +21,19 @@
 #define RANK_DEFAULT RANK_STURGES
 
 #define USAGE                                                                  \
-  "% " PROG_NAME " [-aschiertv] [-Tn] [-Wnum] file...\n"                       \
+  "% " PROG_NAME " [-aHschiertv] [-Tn] [-Wnum] file...\n"                      \
   "  -a   append a return code (data for plot)\n"                              \
   "  -c   show only range and frequency count\n"                               \
   "  -e   print no error messages\n"                                           \
+  "  -H   hold previous frequency for empty bins\n"                            \
   "  -h   print this help\n"                                                   \
   "  -i   round delta to integer value\n"                                      \
   "  -r   print rank\n"                                                        \
   "  -s   print statistics\n"                                                  \
   "  -Tn  set bin/rank rule:\n"                                                \
-  "       n=0  Sturges (1926; default): sample-size based, rough overview\n"    \
-  "       n=1  Scott (1979): SD-based, sensitive to long tails/outliers\n"      \
-  "       n=2  Freedman-Diaconis (1981): IQR-based, robust to outliers\n"       \
+  "       n=0  Sturges (1926; default): sample-size based, rough overview\n"   \
+  "       n=1  Scott (1979): SD-based, sensitive to long tails/outliers\n"     \
+  "       n=2  Freedman-Diaconis (1981): IQR-based, robust to outliers\n"      \
   "  -v   print " PROG_NAME " version\n"                                       \
   "  -Wn  set screen width to n (default: n=60)\n"                             \
   "(c) " AUTHOR ": " REVISION "\n"

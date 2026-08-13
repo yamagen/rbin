@@ -18,6 +18,7 @@ int only_num = 0;
 int with_stat = 0;
 int out_format = 0;
 int print_rank = 0;
+int hold_empty = 0;
 int err_f = 0;
 int int_f = 0;
 double prec_level = 1;
@@ -261,7 +262,14 @@ int count_freq(FILE *fp) {
   }
 
   /* output */
+  int previous_count = 0;
+
   for (i = 0; i < rank; i++) {
+    int display_count = r[i].cnt;
+
+    if (hold_empty && display_count == 0 && i > 0)
+      display_count = previous_count;
+
     if (print_rank)
       printf("%3d ", i + 1);
 
@@ -272,10 +280,11 @@ int count_freq(FILE *fp) {
 
     if (!only_num) {
       printf("- :");
-      for (k = 0; k < r[i].cnt / (rmax / screen_w); k++)
+      for (k = 0; k < display_count / (rmax / screen_w); k++)
         putchar('*');
     }
-    printf(" %d\n", r[i].cnt);
+    printf(" %d\n", display_count);
+    previous_count = display_count;
   }
 
   if (append_return)
@@ -301,6 +310,9 @@ int main(int argc, char **argv) {
         break;
       case 'e':
         err_f = 1;
+        break;
+      case 'H':
+        hold_empty = 1;
         break;
       case 'i':
         int_f = 1;
