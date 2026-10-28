@@ -1,5 +1,5 @@
 #define PROG_NAME "rbin"
-#define REVISION PROG_NAME " - Last change: 2026/08/13-14:58:16."
+#define REVISION PROG_NAME " - Last change: 2026/10/28-12:43:18."
 #define AUTHOR "H. Yamamoto, Ph.D. (Institute of Science Tokyo)"
 
 #define VERSION REVISION
@@ -21,10 +21,11 @@
 #define RANK_DEFAULT RANK_STURGES
 
 #define USAGE                                                                  \
-  "% " PROG_NAME " [-aHschiertv] [-Tn] [-Wnum] file...\n"                      \
+  "% " PROG_NAME " [-aHnschiertv] [-Tn] [-Wnum] file...\n"                     \
   "  -a   append a return code (data for plot)\n"                              \
   "  -c   show only range and frequency count\n"                               \
   "  -e   print no error messages\n"                                           \
+  "  -n   no plot\n"                                                           \
   "  -H   hold previous frequency for empty bins\n"                            \
   "  -h   print this help\n"                                                   \
   "  -i   round delta to integer value\n"                                      \

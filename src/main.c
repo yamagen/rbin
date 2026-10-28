@@ -16,6 +16,7 @@ int screen_w = 60; /* screen width default */
 int append_return = 0;
 int only_num = 0;
 int with_stat = 0;
+int no_plot = 0;
 int out_format = 0;
 int print_rank = 0;
 int hold_empty = 0;
@@ -23,7 +24,6 @@ int err_f = 0;
 int int_f = 0;
 double prec_level = 1;
 int rank_type = 0; /* default is sturges. */
-
 
 static int parse_number(const char *s, double *value) {
   char *end;
@@ -87,8 +87,8 @@ int count_freq(FILE *fp) {
       if (err_f)
         continue;
 
-      fprintf(stderr, "%% %s: input format error at line %ld: %s\n",
-              PROG_NAME, line_no, buf);
+      fprintf(stderr, "%% %s: input format error at line %ld: %s\n", PROG_NAME,
+              line_no, buf);
       free(data);
       fclose(fs);
       return EXIT_FAILURE;
@@ -198,7 +198,7 @@ int count_freq(FILE *fp) {
     x = atof(buf);
     s3 += (x - s1) * (x - s1) * (x - s1);            /* 歪度計算 */
     s4 += (x - s1) * (x - s1) * (x - s1) * (x - s1); /* 尖度計算 */
-    i = (int)((x - min) / delta); /* 階級へふりわけ */
+    i = (int)((x - min) / delta);                    /* 階級へふりわけ */
     if (i < 0)
       i = 0;
     else if (i >= rank)
@@ -224,7 +224,8 @@ int count_freq(FILE *fp) {
     printf("CV=%.3f%% ", cvar(n, s1, s2));
     printf("\n");
 
-    printf("Reliable interval low - upper = %0.3f - %0.3f (Mizutani/Chebyshev; k=2.6)\n",
+    printf("Reliable interval low - upper = %0.3f - %0.3f (Mizutani/Chebyshev; "
+           "k=2.6)\n",
            rlo(n, s1, s2, 2.6), rup(n, s1, s2, 2.6));
 
     printf("skew=%.3f ", skew(n, s2, s3));
@@ -249,7 +250,8 @@ int count_freq(FILE *fp) {
     printf("\n");
 
     if (rank_type == RANK_SCOTT || rank_type == RANK_FD) {
-      printf("method=%s ", rank_type == RANK_SCOTT ? "Scott" : "Freedman-Diaconis");
+      printf("method=%s ",
+             rank_type == RANK_SCOTT ? "Scott" : "Freedman-Diaconis");
       printf("method_bin_width=%.3f ", bin_width);
 
       if (bin_width <= 0.0)
@@ -262,29 +264,33 @@ int count_freq(FILE *fp) {
   }
 
   /* output */
-  int previous_count = 0;
+  if (no_plot)
+    printf("\n");
+  else {
+    int previous_count = 0;
 
-  for (i = 0; i < rank; i++) {
-    int display_count = r[i].cnt;
+    for (i = 0; i < rank; i++) {
+      int display_count = r[i].cnt;
 
-    if (hold_empty && display_count == 0 && i > 0)
-      display_count = previous_count;
+      if (hold_empty && display_count == 0 && i > 0)
+        display_count = previous_count;
 
-    if (print_rank)
-      printf("%3d ", i + 1);
+      if (print_rank)
+        printf("%3d ", i + 1);
 
-    if (out_format > 1 || !int_f)
-      printf("%8.2f ", r[i].range);
-    else
-      printf("%5d ", (int)r[i].range);
+      if (out_format > 1 || !int_f)
+        printf("%8.2f ", r[i].range);
+      else
+        printf("%5d ", (int)r[i].range);
 
-    if (!only_num) {
-      printf("- :");
-      for (k = 0; k < display_count / (rmax / screen_w); k++)
-        putchar('*');
+      if (!only_num) {
+        printf("- :");
+        for (k = 0; k < display_count / (rmax / screen_w); k++)
+          putchar('*');
+      }
+      printf(" %d\n", display_count);
+      previous_count = display_count;
     }
-    printf(" %d\n", display_count);
-    previous_count = display_count;
   }
 
   if (append_return)
@@ -316,6 +322,9 @@ int main(int argc, char **argv) {
         break;
       case 'i':
         int_f = 1;
+        break;
+      case 'n':
+        no_plot = 1;
         break;
       case 's':
         with_stat = 1;
