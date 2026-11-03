@@ -8,6 +8,31 @@
 #include <stdlib.h> /* EXIT_FAILURE,exit */
 #include <string.h>
 
+typedef struct {
+  double q;
+  double marker[5];
+  double pos[5];
+  double desired[5];
+  double increment[5];
+  double init[5];
+  int count;
+} ST_QUANTILE;
+
+typedef struct {
+  int n;
+  double min;
+  double max;
+  double s1;
+  double s2;
+} ST_STAT;
+
+void quantile_init(ST_QUANTILE *qs, double q);
+void quantile_add(ST_QUANTILE *qs, double x);
+double quantile_value(const ST_QUANTILE *qs);
+
+void stat_add(ST_STAT *st, double x);
+int read_data(FILE *fp, FILE *fs, ST_STAT *st, ST_QUANTILE *q1,
+              ST_QUANTILE *q3);
 static int parse_number(const char *s, double *value);
 int count_freq(FILE *fp);
 int main(int argc, char **argv);
@@ -46,21 +71,199 @@ static int parse_number(const char *s, double *value) {
   return *end == '\0';
 }
 
-int count_freq(FILE *fp) {
+void quantile_init(ST_QUANTILE *qs, double q) {
+  memset(qs, 0, sizeof(*qs));
+  qs->q = q;
+}
+
+void stat_add(ST_STAT *st, double x) {
+  if (st->n == 0)
+    st->min = st->max = x;
+
+  st->min = MIN(st->min, x);
+  st->max = MAX(st->max, x);
+
+  st->n++;
+  x -= st->s1;
+  st->s1 += x / st->n;
+  st->s2 += (st->n - 1) * x * x / st->n;
+}
+
+static int compare_double(const void *a, const void *b) {
+  double x = *(const double *)a;
+  double y = *(const double *)b;
+
+  if (x < y)
+    return -1;
+  if (x > y)
+    return 1;
+  return 0;
+}
+
+double quantile_value(const ST_QUANTILE *qs) {
+  if (qs->count < 5)
+    return NAN;
+
+  return qs->marker[2];
+}
+
+void quantile_add(ST_QUANTILE *qs, double x) {
+  if (qs->count < 5) {
+    qs->init[qs->count++] = x;
+
+    if (qs->count == 5) {
+      qsort(qs->init, 5, sizeof(double), compare_double);
+
+      for (int i = 0; i < 5; i++)
+        qs->marker[i] = qs->init[i];
+
+      qs->pos[0] = 1;
+      qs->pos[1] = 2;
+      qs->pos[2] = 3;
+      qs->pos[3] = 4;
+      qs->pos[4] = 5;
+
+      qs->desired[0] = 1;
+      qs->desired[1] = 1 + 2 * qs->q;
+      qs->desired[2] = 1 + 4 * qs->q;
+      qs->desired[3] = 3 + 2 * qs->q;
+      qs->desired[4] = 5;
+
+      qs->increment[0] = 0;
+      qs->increment[1] = qs->q / 2;
+      qs->increment[2] = qs->q;
+      qs->increment[3] = (1 + qs->q) / 2;
+      qs->increment[4] = 1;
+    }
+
+    return;
+  }
+
+  int k;
+
+  if (x < qs->marker[0]) {
+    qs->marker[0] = x;
+    k = 0;
+  } else if (x < qs->marker[1]) {
+    k = 0;
+  } else if (x < qs->marker[2]) {
+    k = 1;
+  } else if (x < qs->marker[3]) {
+    k = 2;
+  } else if (x <= qs->marker[4]) {
+    k = 3;
+  } else {
+    qs->marker[4] = x;
+    k = 3;
+  }
+
+  for (int i = k + 1; i < 5; i++)
+    qs->pos[i]++;
+
+  for (int i = 0; i < 5; i++)
+    qs->desired[i] += qs->increment[i];
+
+  for (int i = 1; i < 4; i++) {
+    double d = qs->desired[i] - qs->pos[i];
+
+    if ((d >= 1 && qs->pos[i + 1] - qs->pos[i] > 1) ||
+        (d <= -1 && qs->pos[i - 1] - qs->pos[i] < -1)) {
+      double direction = (d > 0) ? 1 : -1;
+
+      double next =
+          qs->marker[i] + direction / (qs->pos[i + 1] - qs->pos[i - 1]) *
+                              ((qs->pos[i] - qs->pos[i - 1] + direction) *
+                                   (qs->marker[i + 1] - qs->marker[i]) /
+                                   (qs->pos[i + 1] - qs->pos[i]) +
+                               (qs->pos[i + 1] - qs->pos[i] - direction) *
+                                   (qs->marker[i] - qs->marker[i - 1]) /
+                                   (qs->pos[i] - qs->pos[i - 1]));
+
+      if (qs->marker[i - 1] < next && next < qs->marker[i + 1]) {
+        qs->marker[i] = next;
+      } else {
+        int j = i + (int)direction;
+
+        qs->marker[i] += direction * (qs->marker[j] - qs->marker[i]) /
+                         (qs->pos[j] - qs->pos[i]);
+      }
+      qs->pos[i] += direction;
+    }
+  }
+}
+
+int read_data(FILE *fp, FILE *fs, ST_STAT *st, ST_QUANTILE *q1,
+              ST_QUANTILE *q3) {
 
   char buf[BUF];
-  int n = 0;
+  long line_no = 0;
+  int out_type = 0;
+  double prec = 1;
+  double x = 0.0;
+
+  while (fgets(buf, BUF, fp) != NULL) {
+    line_no++;
+
+    if (!parse_number(buf, &x)) {
+      size_t len = strcspn(buf, "\r\n");
+      buf[len] = '\0';
+
+      if (err_f)
+        continue;
+
+      fprintf(stderr, "%% %s: input format error at line %ld: %s\n", PROG_NAME,
+              line_no, buf);
+      return EXIT_FAILURE;
+    }
+
+    out_type = digitstr(buf);
+    if (out_type == 0)
+      out_type = 2;
+    out_format = MAX(out_format, out_type);
+
+    prec = check_precision(buf);
+    prec_level = MIN(prec_level, prec);
+
+    fprintf(fs, "%.17g\n", x);
+    stat_add(st, x);
+    quantile_add(q1, x);
+    quantile_add(q3, x);
+  }
+
+  if (st->n == 0) {
+    fprintf(stderr, "%% %s: no numeric input\n", PROG_NAME);
+    return EXIT_FAILURE;
+  }
+
+  return 0;
+}
+
+double fd_bin_width_iqr(size_t n, double iqr) {
+  if (n <= 1 || iqr <= 0.0)
+    return 0.0;
+
+  return 2.0 * iqr / cbrt((double)n);
+}
+
+int count_freq(FILE *fp) {
+
+  ST_STAT st = {0};
+
+  ST_QUANTILE q1;
+  ST_QUANTILE q3;
+
+  quantile_init(&q1, 0.25);
+  quantile_init(&q3, 0.75);
+
+  char buf[BUF];
+
   int i = 0, k = 0;
   int rank = 0;
   long line_no = 0;
   int out_type = 0;
 
   double x = 0.0;
-  double max = 0.0;
-  double min = 0.0;
   double rmax = 0.0;
-  double s1 = 0.0;
-  double s2 = 0.0;
   double s3 = 0.0;
   double s4 = 0.0;
   double delta = 0.0;
@@ -103,7 +306,7 @@ int count_freq(FILE *fp) {
     prec = check_precision(buf);
     prec_level = MIN(prec_level, prec);
 
-    if ((size_t)n >= data_cap) {
+    if ((size_t)st.n >= data_cap) {
       size_t new_cap = data_cap ? data_cap * 2 : 1024;
       double *tmp = realloc(data, new_cap * sizeof(double));
       if (tmp == NULL) {
@@ -115,50 +318,53 @@ int count_freq(FILE *fp) {
       data_cap = new_cap;
     }
 
-    data[n] = x;
+    data[st.n] = x;
 
     fprintf(fs, "%.17g\n", x);
-    if (n == 0)
-      min = max = x; /* init variable min and max */
-    max = MAX(max, x);
-    min = MIN(min, x);
-    n++;                       /* N */
-    x -= s1;                   /* gap with temp average */
-    s1 += x / n;               /* average */
-    s2 += (n - 1) * x * x / n; /* square  */
+
+    stat_add(&st, x);
+    quantile_add(&q1, x);
+    quantile_add(&q3, x);
   }
 
-  if (n == 0) {
+  if (st.n == 0) {
     fprintf(stderr, "%% %s: no numeric input\n", PROG_NAME);
     free(data);
     fclose(fs);
     return EXIT_FAILURE;
   }
 
+  double sketch_q1 = quantile_value(&q1);
+  double sketch_q3 = quantile_value(&q3);
+  double sketch_iqr = sketch_q3 - sketch_q1;
+
+  double sketch_bin_width = fd_bin_width_iqr((size_t)st.n, sketch_iqr);
+  int sketch_rank = calculate_bins(st.min, st.max, sketch_bin_width);
+
   /* number of bins/ranks */
   switch (rank_type) {
   case RANK_STURGES:
-    rank = sturges(n);
+    rank = sturges(st.n);
     break;
 
   case RANK_SCOTT:
-    bin_width = scott_bin_width((size_t)n, sdev(n, s2));
+    bin_width = scott_bin_width((size_t)st.n, sdev(st.n, st.s2));
     if (bin_width <= 0.0)
-      rank = sturges(n);
+      rank = sturges(st.n);
     else
-      rank = calculate_bins(min, max, bin_width);
+      rank = calculate_bins(st.min, st.max, bin_width);
     break;
 
   case RANK_FD:
-    bin_width = fd_bin_width(data, (size_t)n);
+    bin_width = fd_bin_width(data, (size_t)st.n);
     if (bin_width <= 0.0)
-      rank = sturges(n);
+      rank = sturges(st.n);
     else
-      rank = calculate_bins(min, max, bin_width);
+      rank = calculate_bins(st.min, st.max, bin_width);
     break;
 
   default:
-    rank = sturges(n);
+    rank = sturges(st.n);
     break;
   }
 
@@ -166,16 +372,16 @@ int count_freq(FILE *fp) {
     rank = 1;
 
   /* calc rank width: delta */
-  if (max == min) {
+  if (st.max == st.min) {
     rank = 1;
     delta = 1.0;
   } else if (int_f) {
-    delta = (int)((max - min) / rank);
+    delta = (int)((st.max - st.min) / rank);
     if (delta < 1.0)
       delta = 1.0;
-    rank = (int)((max - min) / delta) + 1;
+    rank = (int)((st.max - st.min) / delta) + 1;
   } else {
-    delta = (max - min) / rank;
+    delta = (st.max - st.min) / rank;
   }
 
   rewind(fs);
@@ -188,17 +394,17 @@ int count_freq(FILE *fp) {
   for (i = 0; i < rank; i++) {
     r[i].cnt = 0;
     if (int_f)
-      r[i].range = (int)(min + i * delta);
+      r[i].range = (int)(st.min + i * delta);
     else
-      r[i].range = min + i * delta;
+      r[i].range = st.min + i * delta;
   }
 
   /* read from tmpfile for rank distribution */
   while (fgets(buf, BUF, fs) != NULL) {
     x = atof(buf);
-    s3 += (x - s1) * (x - s1) * (x - s1);            /* 歪度計算 */
-    s4 += (x - s1) * (x - s1) * (x - s1) * (x - s1); /* 尖度計算 */
-    i = (int)((x - min) / delta);                    /* 階級へふりわけ */
+    s3 += (x - st.s1) * (x - st.s1) * (x - st.s1);               /* 歪度計算 */
+    s4 += (x - st.s1) * (x - st.s1) * (x - st.s1) * (x - st.s1); /* 尖度計算 */
+    i = (int)((x - st.min) / delta); /* 階級へふりわけ */
     if (i < 0)
       i = 0;
     else if (i >= rank)
@@ -212,24 +418,24 @@ int count_freq(FILE *fp) {
     double jb;
     double jbp;
 
-    jb = jarque_bera(n, s2, s3, s4);
+    jb = jarque_bera(st.n, st.s2, s3, s4);
     jbp = jarque_bera_pvalue(jb);
 
-    printf("N=%d ", n);
-    printf("min=%.3f ", min);
-    printf("mean=%.3f ", s1);
-    printf("max=%.3f ", max);
-    printf("SD=%.3f ", sdev(n, s2));
-    printf("SE=%.3f ", serr(n, s2));
-    printf("CV=%.3f%% ", cvar(n, s1, s2));
+    printf("N=%d ", st.n);
+    printf("min=%.3f ", st.min);
+    printf("mean=%.3f ", st.s1);
+    printf("max=%.3f ", st.max);
+    printf("SD=%.3f ", sdev(st.n, st.s2));
+    printf("SE=%.3f ", serr(st.n, st.s2));
+    printf("CV=%.3f%% ", cvar(st.n, st.s1, st.s2));
     printf("\n");
 
     printf("Reliable interval low - upper = %0.3f - %0.3f (Mizutani/Chebyshev; "
            "k=2.6)\n",
-           rlo(n, s1, s2, 2.6), rup(n, s1, s2, 2.6));
+           rlo(st.n, st.s1, st.s2, 2.6), rup(st.n, st.s1, st.s2, 2.6));
 
-    printf("skew=%.3f ", skew(n, s2, s3));
-    printf("kurtosis=%.3f ", kurt(n, s2, s4));
+    printf("skew=%.3f ", skew(st.n, st.s2, s3));
+    printf("kurtosis=%.3f ", kurt(st.n, st.s2, s4));
 
     if (jb >= 0.0) {
       printf("JB=%.3f ", jb);
@@ -242,6 +448,10 @@ int count_freq(FILE *fp) {
     } else {
       printf("JB=NA JB_p=NA normality=NA ");
     }
+
+    printf("sketch_Q1=%.6f sketch_Q3=%.6f sketch_IQR=%.6f "
+           "sketch_bin_width=%.6f sketch_rank=%d\n",
+           sketch_q1, sketch_q3, sketch_iqr, sketch_bin_width, sketch_rank);
 
     printf("\n");
     printf("rank=%d ", rank);
@@ -264,9 +474,7 @@ int count_freq(FILE *fp) {
   }
 
   /* output */
-  if (no_plot)
-    printf("\n");
-  else {
+  if (!no_plot) {
     int previous_count = 0;
 
     for (i = 0; i < rank; i++) {
@@ -300,13 +508,17 @@ int count_freq(FILE *fp) {
   return 0;
 }
 
+int process(FILE *fp) { return count_freq(fp); }
+
 int main(int argc, char **argv) {
   FILE *fp;
   char *op;
-  int ai;
 
-  for (ai = 1; ai < argc && argv[ai][0] == '-' && argv[ai][1]; ai++) {
-    for (op = &argv[ai][1]; *op; op++) {
+  argc--;
+  argv++;
+
+  while (*argv != NULL && **argv == '-' && *(*argv + 1)) {
+    for (op = *argv + 1; *op; op++) {
       switch (*op) {
       case 'a':
         append_return = 1;
@@ -365,21 +577,28 @@ int main(int argc, char **argv) {
         exit(0);
       }
     }
+
+    argc--;
+    argv++;
   }
 
-  if (ai >= argc) {
+  if (argc == 0)
+    return process(stdin);
+
+  if (*argv == NULL)
     return count_freq(stdin);
-  }
 
-  for (; ai < argc; ai++) {
-    if ((fp = fopen(argv[ai], "r")) == NULL) {
-      fprintf(stderr, "can't open %s!\n", argv[ai]);
+  for (; *argv != NULL; argv++) {
+    if ((fp = fopen(*argv, "r")) == NULL) {
+      fprintf(stderr, "can't open %s!\n", *argv);
       return EXIT_FAILURE;
     }
-    if (count_freq(fp) != 0) {
+
+    if (process(fp) != 0) {
       fclose(fp);
       return EXIT_FAILURE;
     }
+
     fclose(fp);
   }
 

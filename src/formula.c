@@ -70,16 +70,18 @@ double rup(int n, double s1, double s2, double k) {
 
 //
 /*
- * The following functions are used to calculate the bin width and the number of bins for a
- * histogram. The bin width is the width of each bin in the histogram, and the number of bins is the
- * number of bins in the histogram. The bin width is calculated using the Wand bin width formula,
- * and the number of bins is calculated using the Freedman-Diaconis rule. The Wand bin width formula
- * is used to calculate the bin width based on the standard deviation of the data and the number of
- * data points. The Freedman-Diaconis rule is used to calculate the number of bins based on the
- * interquartile range of the data and the number of data points. The bin width and the number of
- * bins are used to create a histogram that accurately represents the data. In statistics, the
- * Freedman芯iaconis rule can be used to select the width of the bins to be used in a histogram.[1]
- * It is named after David A. Freedman and Persi Diaconis.
+ * The following functions are used to calculate the bin width and the number of
+ * bins for a histogram. The bin width is the width of each bin in the
+ * histogram, and the number of bins is the number of bins in the histogram. The
+ * bin width is calculated using the Wand bin width formula, and the number of
+ * bins is calculated using the Freedman-Diaconis rule. The Wand bin width
+ * formula is used to calculate the bin width based on the standard deviation of
+ * the data and the number of data points. The Freedman-Diaconis rule is used to
+ * calculate the number of bins based on the interquartile range of the data and
+ * the number of data points. The bin width and the number of bins are used to
+ * create a histogram that accurately represents the data. In statistics, the
+ * Freedman芯iaconis rule can be used to select the width of the bins to be used
+ * in a histogram.[1] It is named after David A. Freedman and Persi Diaconis.
  */
 
 // double fd_class_width(int n, double IQ) {
@@ -154,7 +156,7 @@ double fd_bin_width(double *data, size_t n) {
     fprintf(stderr, "Error: IQR is zero, cannot calculate bin width.\n");
     return -1.0;
   }
-
+  printf("exact_IQR=%.6f\n", iqr);
   h = 2.0 * iqr / cbrt((double)n);
 
   return h;
