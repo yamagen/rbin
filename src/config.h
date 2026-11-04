@@ -1,5 +1,5 @@
 #define PROG_NAME "rbin"
-#define REVISION PROG_NAME " - Last change: 2026/10/28-12:43:18."
+#define REVISION PROG_NAME " - Last change: 2026/11/04-17:17:49."
 #define AUTHOR "H. Yamamoto, Ph.D. (Institute of Science Tokyo)"
 
 #define VERSION REVISION
@@ -21,8 +21,8 @@
 #define RANK_DEFAULT RANK_STURGES
 
 #define USAGE                                                                  \
-  "% " PROG_NAME " [-aHnschiertv] [-Tn] [-Wnum] file...\n"                     \
-  "  -a   append a return code (data for plot)\n"                              \
+  "% " PROG_NAME " [-bceHhijnrsTVv] [-Tn] [-Wnum] file...\n"                   \
+  "  -b   print blank line between histogram\n"                                \
   "  -c   show only range and frequency count\n"                               \
   "  -e   print no error messages\n"                                           \
   "  -n   no plot\n"                                                           \
@@ -35,6 +35,7 @@
   "       n=0  Sturges (1926; default): sample-size based, rough overview\n"   \
   "       n=1  Scott (1979): SD-based, sensitive to long tails/outliers\n"     \
   "       n=2  Freedman-Diaconis (1981): IQR-based, robust to outliers\n"      \
+  "  -V   print statistics vertically\n"                                       \
   "  -v   print " PROG_NAME " version\n"                                       \
   "  -Wn  set screen width to n (default: n=60)\n"                             \
   "(c) " AUTHOR ": " REVISION "\n"

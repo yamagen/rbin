@@ -1,6 +1,6 @@
 # rbin
 
-Last change: 2026/08/13.
+Last change: 2026/11/04-17:26:02.
 
 Hilofumi Yamamoto, Ph.D.
 Institute of Science Tokyo
@@ -20,7 +20,6 @@ It reads numeric values from standard input or files and prints a frequency dist
 - `-T2`: Freedman-Diaconis rule
 
 For Scott and Freedman-Diaconis, `rbin` first calculates a method-specific bin width and then converts it into the actual number of bins used for output.
-
 
 ## Empty-bin hold
 
@@ -73,27 +72,59 @@ With `-s`, `rbin` prints:
 
 The normality judgment is based on the Jarque-Bera statistic. `normality=not-rejected` means that normality is not rejected by this test; it does not prove that the data are normally distributed.
 
-## Example
+### Vertical output
+
+With `-V`, statistical output is printed as one item per line:
 
 ```sh
-printf "1\n2\n3\n4\n5\n" | ./rbin -c -T0
-printf "1\n2\n3\n4\n5\n" | ./rbin -c -T1
-printf "1\n2\n3\n4\n5\n" | ./rbin -c -T2
+./rbin -nsV data.txt
 ```
 
-With statistical output:
-
-```sh
-printf "1\n2\n3\n4\n5\n" | ./rbin -s -T2
-```
-
-Example output includes lines such as:
+For example:
 
 ```text
-skew=0.228 kurtosis=2.170 JB=0.935 JB_p=0.6265 normality=not-rejected
-rank=4 delta=1.250 accuracy=1.000000
-method=Freedman-Diaconis method_bin_width=1.368
+N	1111
+min	0.000
+mean	18.320
+max	224.000
+SD	13.233
+SE	0.397
+CV	72.237%
 ```
+
+### JSON output
+
+With `-j`, statistical output is printed in JSON format:
+
+```sh
+./rbin -nsj data.txt
+```
+
+For example:
+
+```json
+{
+  "N": 1111,
+  "min": 0.0,
+  "mean": 18.32,
+  "max": 224.0,
+  "SD": 13.233,
+  "SE": 0.397,
+  "CV": 72.237
+}
+```
+
+JSON output can be used directly with tools such as `jq`:
+
+```sh
+./rbin -nsj data.txt | jq '.mean'
+```
+
+```text
+18.320
+```
+
+The `-n` option suppresses the histogram, allowing the JSON output to be passed directly to another command.
 
 ## Compile
 

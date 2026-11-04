@@ -6,7 +6,7 @@
     }
   ],
   "title": "rbin: A small command-line utility for rank-based binning",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "access_right": "open",
   "keywords": [
     "histogram",
@@ -16,16 +16,16 @@
     "Sturges rule",
     "Scott rule",
     "Freedman-Diaconis rule",
+    "descriptive statistics",
     "Jarque-Bera test",
     "normality test",
     "skewness",
     "kurtosis",
+    "JSON",
+    "jq",
     "command-line tool",
     "Unix filter",
-    "exploratory data analysis",
-    "co-occurrence weight",
-    "digital humanities",
-    "waka"
+    "exploratory data analysis"
   ],
   "license": "mit",
   "upload_type": "software",

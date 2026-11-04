@@ -6,9 +6,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-/* Freedman-Diaconis bin width */
-double fd_bin_width(double *data, size_t n);
-
 /* IQR */
 double calculate_iqr(double *data, size_t n);
 
@@ -126,40 +123,12 @@ int main(void) {
 }
 #endif
 
-// Freedman-Diaconisの計算関数
 /* Freedman-Diaconis bin width */
-double fd_bin_width(double *data, size_t n) {
-  double *sorted_data;
-  double iqr;
-  double h;
-
-  if (n <= 1) {
-    fprintf(stderr, "Error: not enough data points.\n");
+double fd_bin_width(size_t n, double iqr) {
+  if (n <= 1 || iqr <= 0.0)
     return -1.0;
-  }
 
-  sorted_data = malloc(n * sizeof(double));
-  if (sorted_data == NULL) {
-    fprintf(stderr, "Error: memory allocation failed.\n");
-    return -1.0;
-  }
-
-  for (size_t i = 0; i < n; i++)
-    sorted_data[i] = data[i];
-
-  qsort(sorted_data, n, sizeof(double), compare);
-
-  iqr = calculate_iqr(sorted_data, n);
-  free(sorted_data);
-
-  if (iqr <= 0.0) {
-    fprintf(stderr, "Error: IQR is zero, cannot calculate bin width.\n");
-    return -1.0;
-  }
-  printf("exact_IQR=%.6f\n", iqr);
-  h = 2.0 * iqr / cbrt((double)n);
-
-  return h;
+  return 2.0 * iqr / cbrt((double)n);
 }
 
 // 四分位範囲（IQR）の計算
@@ -217,9 +186,16 @@ double jarque_bera_pvalue(double jb) {
   return exp(-jb / 2.0);
 }
 
-int sturges(double count) { return (int)(1 + log(count) / log(2)); }
+double sturges(double count, double min, double max) {
+  int rank;
 
-int sturges_two(double count) { return (int)(1 + 3.32 * log10(count)); }
+  rank = (int)(1 + log(count) / log(2));
+
+  if (rank < 1 || max <= min)
+    return 0.0;
+
+  return (max - min) / rank;
+}
 
 double scott_bin_width(size_t n, double s) {
   /*
@@ -234,4 +210,35 @@ double scott_bin_width(size_t n, double s) {
     return 0.0;
 
   return 3.5 * s * pow((double)n, -1.0 / 3.0);
+}
+
+double calc_iqr(FILE *fs, size_t n) {
+  double *data;
+  double iqr;
+  size_t i = 0;
+
+  if (n <= 1)
+    return -1.0;
+
+  data = malloc(n * sizeof(double));
+  if (data == NULL)
+    return -1.0;
+
+  rewind(fs);
+
+  while (i < n && fscanf(fs, "%lf", &data[i]) == 1)
+    i++;
+
+  if (i != n) {
+    free(data);
+    return -1.0;
+  }
+
+  qsort(data, n, sizeof(double), compare);
+
+  iqr = calculate_iqr(data, n);
+
+  free(data);
+
+  return iqr;
 }

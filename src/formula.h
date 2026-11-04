@@ -2,13 +2,17 @@
 #define FORMULA_H
 
 #include <stddef.h>
+#include <stdio.h>
 
-int sturges(double count);
-int sturges_two(double count);
+double calc_iqr(FILE *fs, size_t n);
+
+double sturges(double count, double min, double max);
 
 double scott_bin_width(size_t n, double s);
 
-double fd_bin_width(double *data, size_t n);
+/* Freedman-Diaconis bin width */
+double fd_bin_width(size_t n, double iqr);
+
 int calculate_bins(double min, double max, double bin_width);
 
 double jarque_bera(int n, double s2, double s3, double s4);
