@@ -1,5 +1,5 @@
 #define PROG_NAME "rbin"
-#define REVISION PROG_NAME " - Last change: 2026/11/04-17:17:49."
+#define REVISION PROG_NAME " - Last change: 2026/11/04-18:09:19."
 #define AUTHOR "H. Yamamoto, Ph.D. (Institute of Science Tokyo)"
 
 #define VERSION REVISION
@@ -29,6 +29,7 @@
   "  -H   hold previous frequency for empty bins\n"                            \
   "  -h   print this help\n"                                                   \
   "  -i   round delta to integer value\n"                                      \
+  "  -j   print statistics in JSON format\n"                                   \
   "  -r   print rank\n"                                                        \
   "  -s   print statistics\n"                                                  \
   "  -Tn  set bin/rank rule:\n"                                                \
